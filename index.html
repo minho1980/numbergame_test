@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>숫자 피하기 게임</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: #111; color: #fff;}
+    canvas { display: block; margin: 0 auto; background: #252525; }
+    #score { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); font-size: 24px; }
+    #restart { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); display:none; font-size:20px;}
+  </style>
+</head>
+<body>
+  <div id="score">점수: 0</div>
+  <div id="restart">게임 오버! <button onclick="restartGame()">다시시작</button></div>
+  <canvas id="game" width="400" height="600"></canvas>
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const scoreDiv = document.getElementById('score');
+    const restartDiv = document.getElementById('restart');
+    let player = { x: 200, y: 570, w: 50, h: 20, speed: 8 };
+    let numbers = [];
+    let left = false, right = false;
+    let score = 0, gameover = false;
+
+    function spawnNumber() {
+      const num = {
+        x: Math.random() * (400 - 40),
+        y: -40,
+        size: 40,
+        speed: 2.5 + Math.random() * score / 20
+      };
+      numbers.push(num);
+    }
+
+    function update() {
+      if (gameover) return;
+      if (left) player.x -= player.speed;
+      if (right) player.x += player.speed;
+      player.x = Math.max(0, Math.min(350, player.x));
+
+      numbers.forEach(num => { num.y += num.speed; });
+
+      // 충돌검사
+      numbers.forEach(num => {
+        if (
+          num.x < player.x + player.w &&
+          num.x + num.size > player.x &&
+          num.y < player.y + player.h &&
+          num.y + num.size > player.y
+        ) {
+          gameOver();
+        }
+      });
+
+      // 바닥에 닿은 숫자 제거 및 점수 증가
+      numbers = numbers.filter(num => {
+        if (num.y > 600) { score++; return false; }
+        else return true;
+      });
+
+      scoreDiv.textContent = '점수: ' + score;
+
+      if (Math.random() < 0.03 + score / 200) spawnNumber();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, 400, 600);
+      ctx.fillStyle = "#0f0";
+      ctx.fillRect(player.x, player.y, player.w, player.h);
+      ctx.fillStyle = "#fff";
+      numbers.forEach(num => {
+        ctx.beginPath();
+        ctx.arc(num.x + num.size / 2, num.y + num.size / 2, num.size / 2, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.fillStyle = "#222";
+        ctx.font = "20px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(Math.floor(num.y), num.x + num.size / 2, num.y + 26);
+        ctx.fillStyle = "#fff";
+      });
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      if (!gameover) requestAnimationFrame(gameLoop);
+    }
+
+    function gameOver() {
+      gameover = true;
+      restartDiv.style.display = 'block';
+    }
+
+    function restartGame() {
+      score = 0;
+      numbers = [];
+      player.x = 200;
+      gameover = false;
+      restartDiv.style.display = 'none';
+      gameLoop();
+    }
+
+    // 키보드 이벤트
+    document.addEventListener('keydown', e => {
+      if (e.key === "ArrowLeft") left = true;
+      if (e.key === "ArrowRight") right = true;
+    });
+    document.addEventListener('keyup', e => {
+      if (e.key === "ArrowLeft") left = false;
+      if (e.key === "ArrowRight") right = false;
+    });
+
+ // 모바일 터치
+    canvas.addEventListener('touchstart', e => {
+      const x = e.touches.clientX - canvas.getBoundingClientRect().left;
+      if (x < player.x + player.w/2) left = true;
+      else right = true;
+    });
+    canvas.addEventListener('touchend', e => { left = false; right = false; });
+
+    gameLoop();
+  </script>
+</body>
+</html>
